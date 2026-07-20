@@ -3,22 +3,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import pickle
+import os
 
-MODEL_PATH = "model/tennis_model_xgb_wimbledon.pkl"
-PLAYER_STATS_PATH = "model/data/player_stats.csv"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb_wimbledon.pkl')
+PLAYER_STATS_PATH = os.path.join(BASE_DIR, 'model', 'data', 'player_stats.csv')
 # ^ headers: player,rank,age,elo,recent_form,bp_pressure,grass_elo,grass_form,clay_elo,clay_form,hard_elo,hard_form
 
-# # input features for model
-# INPUTS = [
-#     'age_a', 'age_b',
-#     'form_a', 'form_b',
-#     'surface_form_a', 'surface_form_b',
-#     'bp_pressure_a', 'bp_pressure_b',
-#     'elo_a', 'elo_b',
-#     'surface_elo_a', 'surface_elo_b',
-#     'elo_diff', 'surface_elo_diff',
-#     'surface_Clay', 'surface_Grass', 'surface_Hard',
-# ]
+print(f"Looking for model at: {MODEL_PATH}")
+print(f"Looking for player stats at: {PLAYER_STATS_PATH}")
+print(f"Files in BASE_DIR: {os.listdir(BASE_DIR)}")
 
 app = FastAPI()
 
@@ -33,6 +27,7 @@ app.add_middleware(
 # load players data + model
 players = pd.read_csv(PLAYER_STATS_PATH, index_col='player') # the index will be the player name
 model = pickle.load(open(MODEL_PATH, "rb")) # rb - read binary, Halle / Queens being the last tourney recorded (before Wimbledon)
+print("Both files loaded successfully")
 
 @app.get("/all_players")
 def all_players():
