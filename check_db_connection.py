@@ -13,4 +13,6 @@ if __name__ == "__main__":
         tables = [row[0] for row in cur.fetchall()]
         print(f"Tables in public schema: {tables or '(none)'}")
     conn.close()
+
+    
     print("Connected successfully.")
