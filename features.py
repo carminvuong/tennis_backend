@@ -33,6 +33,7 @@ def load_and_clean_matches(data_dir, years):
 
 def restructure_matches(df):
     df_a = pd.DataFrame({
+        'match_id':     df.index,
         'tourney_date': df['tourney_date'],
         'surface':      df['surface'],
         'player_a':     df['winner_name'],
@@ -44,6 +45,7 @@ def restructure_matches(df):
     })
 
     df_b = pd.DataFrame({
+        'match_id':     df.index,
         'tourney_date': df['tourney_date'],
         'surface':      df['surface'],
         'player_a':     df['loser_name'],
@@ -181,3 +183,55 @@ def compute_bp_pressure_history(matches, last_N=10):
 
     matches['bp_pressure'] = bp_pressure
     return matches
+
+
+def build_training_table(matches):
+    """Turns the per-player-per-match rows (each already carrying its own
+    player's pre-match elo/form/bp_pressure, computed by the functions above)
+    into one wide row per match with both players' stats side by side, via a
+    self-join on match_id — every match has exactly two rows (each player's
+    perspective), so joining the frame to itself and keeping only the pairs
+    where the two rows are each other's mirror recovers the "elo_a, elo_b,
+    elo_diff" shape the model trains on. No feature is recomputed here, this
+    only recombines values compute_elo_history/compute_form_history/
+    compute_bp_pressure_history already produced correctly.
+    """
+    matches = matches.reset_index(drop=True)
+    matches['row_id'] = matches.index
+
+    wide = matches.merge(matches, on='match_id', suffixes=('_a', '_b'))
+    wide = wide[wide['row_id_a'] != wide['row_id_b']].reset_index(drop=True)
+
+    surface = wide['surface_a']
+    is_grass = surface == 'Grass'
+    is_clay = surface == 'Clay'
+    is_hard = surface == 'Hard'
+
+    surface_elo_a = wide['grass_elo_a'].where(is_grass, wide['clay_elo_a'].where(is_clay, wide['hard_elo_a']))
+    surface_elo_b = wide['grass_elo_b'].where(is_grass, wide['clay_elo_b'].where(is_clay, wide['hard_elo_b']))
+    surface_form_a = wide['grass_form_a'].where(is_grass, wide['clay_form_a'].where(is_clay, wide['hard_form_a']))
+    surface_form_b = wide['grass_form_b'].where(is_grass, wide['clay_form_b'].where(is_clay, wide['hard_form_b']))
+
+    final = pd.DataFrame({
+        'tourney_date':     wide['tourney_date_a'],
+        'age_a':            wide['age_a_a'],
+        'age_b':            wide['age_a_b'],
+        'form_a':           wide['recent_form_a'],
+        'form_b':           wide['recent_form_b'],
+        'surface_form_a':   surface_form_a,
+        'surface_form_b':   surface_form_b,
+        'bp_pressure_a':    wide['bp_pressure_a'],
+        'bp_pressure_b':    wide['bp_pressure_b'],
+        'elo_a':            wide['elo_a'],
+        'elo_b':            wide['elo_b'],
+        'surface_elo_a':    surface_elo_a,
+        'surface_elo_b':    surface_elo_b,
+        'elo_diff':         wide['elo_a'] - wide['elo_b'],
+        'surface_elo_diff': surface_elo_a - surface_elo_b,
+        'surface_Clay':     is_clay.astype(int),
+        'surface_Grass':    is_grass.astype(int),
+        'surface_Hard':     is_hard.astype(int),
+        'label':            wide['label_a'],
+    })
+
+    return final

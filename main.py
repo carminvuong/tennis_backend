@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from xgboost import XGBClassifier
 import pandas as pd
-import pickle
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb_wimbledon.pkl')
+MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb.json')
 PLAYER_STATS_PATH = os.path.join(BASE_DIR, 'model', 'data', 'player_stats.csv')
 # ^ headers: player,rank,age,elo,recent_form,bp_pressure,grass_elo,grass_form,clay_elo,clay_form,hard_elo,hard_form
 
@@ -26,7 +26,8 @@ app.add_middleware(
 
 # load players data + model
 players = pd.read_csv(PLAYER_STATS_PATH, index_col='player') # the index will be the player name
-model = pickle.load(open(MODEL_PATH, "rb")) # rb - read binary, Halle / Queens being the last tourney recorded (before Wimbledon)
+model = XGBClassifier()
+model.load_model(MODEL_PATH)
 print("Both files loaded successfully")
 
 @app.get("/all_players")
