@@ -7,7 +7,7 @@ from xgboost import XGBClassifier
 import pandas as pd
 import os
 
-from db import get_player_snapshot
+from db import get_player_career_range, get_player_snapshot
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb.json')
@@ -56,6 +56,17 @@ def player_snapshot(player_name: str, as_of: date):
         "last_played": snapshot_date,
         **snapshot,
     }
+
+@app.get("/player_career_range")
+def player_career_range(player_name: str):
+    career_range = get_player_career_range(player_name)
+    if career_range is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No career range found for {player_name}",
+        )
+
+    return {"player_name": player_name, **career_range}
 
 class PredictionRequest(BaseModel): # data and type validation
     player_a: str
