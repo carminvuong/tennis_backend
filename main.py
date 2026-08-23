@@ -1,9 +1,13 @@
+from datetime import date
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from xgboost import XGBClassifier
 import pandas as pd
 import os
+
+from db import get_player_snapshot
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb.json')
@@ -32,7 +36,26 @@ print("Both files loaded successfully")
 
 @app.get("/all_players")
 def all_players():
-    return {"players" : sorted(players.index.tolist())} # a list of player names in alphabetical order 
+    return {"players" : sorted(players.index.tolist())} # a list of player names in alphabetical order
+
+@app.get("/player_snapshot")
+def player_snapshot(player_name: str, as_of: date):
+    snapshot = get_player_snapshot(player_name, as_of)
+
+    # if DNE, return a 404
+    if snapshot is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No stats found for {player_name} on or before {as_of}",
+        )
+
+    snapshot_date = snapshot.pop('match_date')
+    return {
+        "player_name": player_name,
+        "as_of_requested": as_of,
+        "last_played": snapshot_date,
+        **snapshot,
+    }
 
 class PredictionRequest(BaseModel): # data and type validation
     player_a: str
