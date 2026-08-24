@@ -13,7 +13,7 @@ from features import (
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'model', 'data')
-YEARS = list(range(2009, 2027)) + ['ongoing_tourneys']
+YEARS = list(range(1991, 2027)) + ['ongoing_tourneys']
 
 INSERT_COLUMNS = [
     'player_name', 'match_date', 'surface', 'rank', 'age', 'elo',

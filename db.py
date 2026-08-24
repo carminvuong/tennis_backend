@@ -67,3 +67,27 @@ def get_player_career_range(player_name):
         return None
 
     return {'first_match_date': row[0], 'last_match_date': row[1]}
+
+
+ELO_HISTORY_COLUMNS = ['match_date', 'elo', 'hard_elo', 'clay_elo', 'grass_elo']
+
+
+def get_player_elo_history(player_name):
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT {', '.join(ELO_HISTORY_COLUMNS)}
+                FROM player_ratings_history
+                WHERE player_name = %s
+                ORDER BY match_date ASC;
+                """,
+                (player_name,),
+            )
+            rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    return [dict(zip(ELO_HISTORY_COLUMNS, row)) for row in rows]
