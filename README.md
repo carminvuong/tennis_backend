@@ -1,4 +1,4 @@
-# Tennis Match Predictor — Backend
+# Tennis Versus — Backend
 
 A FastAPI service that predicts ATP tennis match outcomes, including **cross-era match-ups**, using each player's stats as of any date in their tracked career, not just their current form. This is the backend for [tennis_versus](https://github.com/carminvuong/tennis_versus), a Next.js frontend deployed on Vercel.
 
