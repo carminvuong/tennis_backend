@@ -7,16 +7,12 @@ from xgboost import XGBClassifier
 import pandas as pd
 import os
 
-from db import get_player_career_range, get_player_elo_history, get_player_snapshot
+from db import get_all_players, get_player_career_range, get_player_elo_history, get_player_snapshot
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, 'model', 'tennis_model_xgb.json')
-PLAYER_STATS_PATH = os.path.join(BASE_DIR, 'model', 'data', 'player_stats.csv')
-# ^ headers: player,rank,age,elo,recent_form,bp_pressure,grass_elo,grass_form,clay_elo,clay_form,hard_elo,hard_form
 
 print(f"Looking for model at: {MODEL_PATH}")
-print(f"Looking for player stats at: {PLAYER_STATS_PATH}")
-print(f"Files in BASE_DIR: {os.listdir(BASE_DIR)}")
 
 app = FastAPI()
 
@@ -28,15 +24,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# load players data + model
-players = pd.read_csv(PLAYER_STATS_PATH, index_col='player') # the index will be the player name
 model = XGBClassifier()
-model.load_model(MODEL_PATH)    
-print("Both files loaded successfully")
+model.load_model(MODEL_PATH)
+print("Model loaded successfully")
 
 @app.get("/all_players")
 def all_players():
-    return {"players" : sorted(players.index.tolist())} # a list of player names in alphabetical order
+    return {"players": get_all_players()} # already sorted (ORDER BY player_name)
 
 @app.get("/player_snapshot")
 def player_snapshot(player_name: str, as_of: date):
