@@ -76,14 +76,12 @@ class PredictionRequest(BaseModel): # data and type validation
     surface:  str
 
 def resolve_player(player_name, as_of):
-    # as_of omitted -> current behavior, unchanged: most recent stats from the CSV lookup
+    # as_of omitted -> "as of today", so a player who hasn't played in years
+    # (retired or otherwise) surfaces a stale last_played instead of silently
+    # returning frozen stats with no indication of how old they are
     if as_of is None:
-        try:
-            return players.loc[player_name], None
-        except KeyError:
-            raise HTTPException(status_code=404, detail=f"Player not found: {player_name}")
+        as_of = date.today()
 
-    # as_of given -> historical snapshot from player_ratings_history
     snapshot = get_player_snapshot(player_name, as_of)
     if snapshot is None:
         raise HTTPException(
@@ -123,18 +121,12 @@ def predict(req: PredictionRequest):
     # returns prob of player A winning
     prob = model.predict_proba(features)[0][1]
 
-    response = {
+    return {
         "player_a": req.player_a,
         "player_b": req.player_b,
         "surface": surface,
         "prob_a": round(float(prob), 3),
-        "prob_b": round(float(1-prob), 3)
+        "prob_b": round(float(1-prob), 3),
+        "last_played_a": last_played_a,
+        "last_played_b": last_played_b,
     }
-    # only present when a historical date was requested for that player -
-    # omitting both dates reproduces the exact response shape from before this change
-    if last_played_a is not None:
-        response["last_played_a"] = last_played_a
-    if last_played_b is not None:
-        response["last_played_b"] = last_played_b
-
-    return response
