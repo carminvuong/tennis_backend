@@ -2,7 +2,7 @@ from datetime import date
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from xgboost import XGBClassifier
 import pandas as pd
 import os
@@ -80,6 +80,13 @@ class PredictionRequest(BaseModel): # data and type validation
     date_b:   date | None = None
     surface:  str
 
+    @field_validator('surface')
+    @classmethod
+    def validate_surface(cls, v):
+        if v.lower() not in ('hard', 'clay', 'grass'):
+            raise ValueError("surface must be one of 'hard', 'clay', 'grass'")
+        return v
+
 def resolve_player(player_name, as_of):
     # as_of omitted -> "as of today", so a player who hasn't played in years
     # (retired or otherwise) surfaces a stale last_played instead of silently
@@ -98,6 +105,9 @@ def resolve_player(player_name, as_of):
 
 @app.post("/predict")
 def predict(req: PredictionRequest):
+    if req.player_a == req.player_b:
+        raise HTTPException(status_code=400, detail="player_a and player_b must be different")
+
     stats_a, last_played_a = resolve_player(req.player_a, req.date_a)
     stats_b, last_played_b = resolve_player(req.player_b, req.date_b)
 
